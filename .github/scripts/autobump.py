@@ -73,7 +73,20 @@ def write_formula(name, content):
 
 def current_version(content):
     m = re.search(r'^\s*version\s+"([^"]+)"', content, re.M)
-    return m.group(1) if m else None
+    if m:
+        return m.group(1)
+    # Version scanned from URL by Homebrew (no explicit stanza): use first URL hit.
+    for um in re.finditer(r'^\s*url\s+"([^"]+)"', content, re.M):
+        vm = re.search(r"v?(\d+\.\d+\.\d+)", um.group(1))
+        if vm:
+            return vm.group(1)
+    return None
+
+
+def set_version(content, latest):
+    """Replace explicit version stanza; no-op when version is URL-scanned."""
+    return re.sub(r'^\s*version\s+"[^"]+"', f'  version "{latest}"', content,
+                  count=1, flags=re.M)
 
 
 def semver_key(v):
@@ -105,7 +118,7 @@ def bump_command_code():
     new = content
     new = re.sub(r'^\s*url\s+"https://registry\.npmjs\.org/command-code/[^"]+"',
                  f'  url "{tarball}"', new, count=1, flags=re.M)
-    new = re.sub(r'^\s*version\s+"[^"]+"', f'  version "{latest}"', new, count=1, flags=re.M)
+    new = set_version(new, latest)
     new = re.sub(r'^\s*sha256\s+"[0-9a-f]{64}"', f'  sha256 "{digest}"', new, count=1, flags=re.M)
     if new != content:
         write_formula("command-code", new)
@@ -118,7 +131,9 @@ def bump_cua_driver():
     cur = current_version(content)
     best = None
     for r in github_releases("trycua/cua"):
-        if r.get("draft") or r.get("prerelease"):
+        # NOTE: upstream flags every release as a GitHub prerelease, so only
+        # drafts are skipped here; the ^cua-driver-rs-v regex excludes nightly-* tags.
+        if r.get("draft"):
             continue
         tag = r.get("tag_name", "")
         m = re.match(r"^cua-driver-rs-v(\d+\.\d+\.\d+)$", tag)
@@ -149,7 +164,7 @@ def bump_cua_driver():
         print(f"cua-driver {latest}: missing checksums for {targets}", file=sys.stderr)
         return None
     new = content
-    new = re.sub(r'^\s*version\s+"[^"]+"', f'  version "{latest}"', new, count=1, flags=re.M)
+    new = set_version(new, latest)
     for target, digest in targets.items():
         url = f"https://github.com/trycua/cua/releases/download/{tag}/cua-driver-rs-{latest}-{target}.tar.gz"
         # Replace each per-arch url+sha256 pair (url line then sha256 line).
@@ -173,7 +188,8 @@ def bump_lume():
     cur = current_version(content)
     best = None
     for r in github_releases("trycua/cua"):
-        if r.get("draft") or r.get("prerelease"):
+        # NOTE: same as cua-driver — only drafts skipped; ^lume-v excludes nightly-* tags.
+        if r.get("draft"):
             continue
         tag = r.get("tag_name", "")
         m = re.match(r"^lume-v(\d+\.\d+\.\d+)$", tag)
@@ -200,7 +216,7 @@ def bump_lume():
     new = content
     new = re.sub(r'^\s*url\s+"https://github\.com/trycua/cua/releases/download/lume-v[^"]+"',
                  f'  url "{url}"', new, count=1, flags=re.M)
-    new = re.sub(r'^\s*version\s+"[^"]+"', f'  version "{latest}"', new, count=1, flags=re.M)
+    new = set_version(new, latest)
     new = re.sub(r'^\s*sha256\s+"[0-9a-f]{64}"', f'  sha256 "{digest}"', new, count=1, flags=re.M)
     if new != content:
         write_formula("lume", new)
@@ -232,7 +248,7 @@ def bump_reason_language_server():
     mac_sha = sha256_of_url(mac_url)
     linux_sha = sha256_of_url(linux_url)
     new = content
-    new = re.sub(r'^\s*version\s+"[^"]+"', f'  version "{latest}"', new, count=1, flags=re.M)
+    new = set_version(new, latest)
     new = re.sub(r"https://github\.com/jaredly/reason-language-server/releases/download/[^/]+/rls-macos\.zip",
                  mac_url, new)
     new = re.sub(r"https://github\.com/jaredly/reason-language-server/releases/download/[^/]+/rls-linux\.zip",

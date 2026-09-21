@@ -8,9 +8,11 @@ class Lume < Formula
 
   # Upstream install.sh is macOS + ARM64 only, requires macOS 13+.
   livecheck do
-    url "https://github.com/trycua/cua"
+    # Same as cua-driver: :git scans all tags (releases API is paged to 30
+    # and lume tags sit past it; upstream also flags releases as prereleases).
+    url :stable
     regex(/^lume-v?(\d+(?:\.\d+)+)$/i)
-    strategy :github_latest
+    strategy :git
   end
 
   depends_on arch: :arm64

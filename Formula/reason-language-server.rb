@@ -1,7 +1,6 @@
 class ReasonLanguageServer < Formula
   desc "Language Server Protocol implementation for Reason"
   homepage "https://github.com/jaredly/reason-language-server"
-  version "1.7.13"
   license "MIT"
 
   livecheck do

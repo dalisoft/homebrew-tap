@@ -5,9 +5,14 @@ class CuaDriver < Formula
   license "MIT"
 
   livecheck do
+    # :stable resolves to the first per-arch tarball; the repo is derived from it.
+    # :git (ls-remote --tags) is required: trycua/cua is a monorepo, so
+    # :github_latest only sees the newest product tag, :github_releases only
+    # scans the first 30 releases, and upstream flags releases as prereleases
+    # (git tags carry no such flag; the regex still excludes nightly-* tags).
     url :stable
     regex(/^cua-driver-rs-v?(\d+(?:\.\d+)+)$/i)
-    strategy :github_latest
+    strategy :git
   end
 
   on_macos do

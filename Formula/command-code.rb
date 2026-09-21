@@ -2,7 +2,6 @@ class CommandCode < Formula
   desc "Coding agent that learns your coding taste (CLI)"
   homepage "https://commandcode.ai"
   url "https://registry.npmjs.org/command-code/-/command-code-1.58.1.tgz"
-  version "1.58.1"
   sha256 "c00c1155f9b118d8ad5c516c2afa554280b96a9b68c5f03d529267409012e1f8"
   # Upstream npm license field is UNLICENSED (proprietary).
   # Homebrew SPDX vocabulary has no value for that, so mark as non-representable.
@@ -10,7 +9,8 @@ class CommandCode < Formula
 
   # Upstream engines: { node: ">=22" }. Use current Homebrew node (satisfies >=22).
   livecheck do
-    url "https://registry.npmjs.org/command-code"
+    # :stable is the npm registry tarball; :npm parses the package name from it.
+    url :stable
     strategy :npm
   end
 
