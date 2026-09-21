@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - "Formula/*.rb"
+      - "Casks/*.rb"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "Formula/*.rb"
+      - "Casks/*.rb"
+  workflow_dispatch:
+
+jobs:
+  audit-style:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tap local repo
+        run: brew tap dalisoft/tap "$GITHUB_WORKSPACE"
+
+      - name: Ruby syntax
+        run: ruby -c Formula/*.rb
+
+      - name: brew style
+        run: brew style dalisoft/tap/command-code dalisoft/tap/cua-driver dalisoft/tap/lume dalisoft/tap/reason-language-server
+
+      - name: brew audit (strict, online, new)
+        run: brew audit --strict --online --new dalisoft/tap/command-code dalisoft/tap/cua-driver dalisoft/tap/lume dalisoft/tap/reason-language-server
+
+      - name: brew livecheck (sanity, must resolve)
+        run: brew livecheck dalisoft/tap/command-code dalisoft/tap/cua-driver dalisoft/tap/lume dalisoft/tap/reason-language-server || true

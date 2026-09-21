@@ -1,0 +1,80 @@
+name: Autobump (hourly)
+
+# Follows https://github.com/Homebrew/homebrew-core/blob/main/.github/workflows/autobump.yml
+# Adapted for personal tap: hourly schedule, same `brew bump` flow, PRs opened in-repo.
+on:
+  schedule:
+    # Every hour (user requirement; core uses every 3h: "45 1-23/3 * * *").
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      formulae:
+        description: Custom list of formulae to livecheck and bump if outdated
+        required: false
+      dry_run:
+        description: "Check only, do not open PR"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  autobump:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/homebrew/brew:main
+    env:
+      GNUPGHOME: /tmp/gnupghome
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+        with:
+          core: true
+          cask: false
+
+      - name: Checkout tap
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: tap
+
+      - name: Tap local checkout
+        run: brew tap dalisoft/tap "$GITHUB_WORKSPACE/tap"
+
+      - name: Configure Git user
+        uses: Homebrew/actions/git-user-config@master
+        with:
+          username: ${{ (github.event_name == 'workflow_dispatch' && github.actor) || 'BrewTestBot' }}
+
+      - name: Dry run (livecheck only)
+        if: inputs.dry_run == 'true'
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          brew bump --no-fork --formulae --tap=dalisoft/tap ${{ inputs.formulae }} || true
+          brew livecheck --tap=dalisoft/tap || true
+
+      - name: Bump formulae (version + hashes, open PR)
+        if: inputs.dry_run != 'true'
+        env:
+          HOMEBREW_TEST_BOT_AUTOBUMP: 1
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GIT_COMMITTER_NAME: BrewTestBot
+          HOMEBREW_GIT_COMMITTER_EMAIL: 1589480+BrewTestBot@users.noreply.github.com
+        run: |
+          if [[ -n "${FORMULAE-}" ]]; then
+            # xargs path mirrors homebrew-core for explicit formula lists.
+            xargs -t brew bump --no-fork --open-pr --formulae --bump-synced --tap=dalisoft/tap <<<"${FORMULAE}"
+          else
+            # Hourly: check every formula in the tap; outdated ones get version+sha256 bumps + PR.
+            brew bump --no-fork --open-pr --formulae --bump-synced --tap=dalisoft/tap
+          fi
+        env:
+          FORMULAE: ${{ inputs.formulae }}
