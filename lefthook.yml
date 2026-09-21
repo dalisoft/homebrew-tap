@@ -1,0 +1,36 @@
+# lefthook — Git hooks for dalisoft/homebrew-tap.
+# Mirrors Homebrew's own checks: `brew style` (Rubocop, lint+format for
+# Formula/Cask Ruby) and `brew audit` (correctness), plus `rumdl` for Markdown.
+# Install once per clone: `lefthook install`
+min_version: 2.1.14
+
+output:
+  - execution_out
+
+pre-commit:
+  parallel: true
+  commands:
+    ruby-syntax:
+      glob:
+        - "Formula/*.rb"
+        - "Casks/*.rb"
+      run: ruby -c {staged_files}
+    brew-style:
+      # Same linter/formatter Homebrew core uses (`brew style --fix` to autofix).
+      glob:
+        - "Formula/*.rb"
+        - "Casks/*.rb"
+      run: brew style {staged_files}
+    rumdl:
+      glob:
+        - "*.md"
+      run: rumdl check {staged_files}
+
+pre-push:
+  commands:
+    ruby-syntax-all:
+      run: ruby -c Formula/*.rb
+    brew-style-all:
+      run: brew style Formula/*.rb
+    rumdl-all:
+      run: rumdl check *.md

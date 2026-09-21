@@ -5,14 +5,38 @@ on:
     paths:
       - "Formula/*.rb"
       - "Casks/*.rb"
+      - "'*.md'"
+      - "lefthook.yml"
       - ".github/workflows/ci.yml"
   pull_request:
     paths:
       - "Formula/*.rb"
       - "Casks/*.rb"
+      - "'*.md'"
+      - "lefthook.yml"
   workflow_dispatch:
 
 jobs:
+  lint-format:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lefthook + rumdl (same as local hooks)
+        run: brew install lefthook rumdl
+
+      - name: Ruby syntax
+        run: ruby -c Formula/*.rb
+
+      - name: brew style (lint+format, as Homebrew core)
+        run: brew style Formula/*.rb
+
+      - name: rumdl check (Markdown lint)
+        run: rumdl check *.md
+
+      - name: lefthook config valid
+        run: lefthook dump
+
   audit-style:
     runs-on: macos-latest
     steps:
